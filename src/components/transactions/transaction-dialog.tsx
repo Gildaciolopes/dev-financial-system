@@ -34,6 +34,7 @@ interface TransactionDialogProps {
   transaction?: Transaction | null;
   categories: Category[];
   userId: string;
+  onSave?: (saved: Transaction) => void;
 }
 
 export function TransactionDialog({
@@ -42,6 +43,7 @@ export function TransactionDialog({
   transaction,
   categories,
   userId,
+  onSave,
 }: TransactionDialogProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -75,6 +77,26 @@ export function TransactionDialog({
     }
   }, [transaction, open]);
 
+  useEffect(() => {
+    if (open && typeof window !== "undefined") {
+      try {
+        (document.activeElement as HTMLElement | null)?.blur();
+        document.dispatchEvent(
+          new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+        );
+        document.body.dispatchEvent(
+          new MouseEvent("mousedown", { bubbles: true })
+        );
+        document.body.dispatchEvent(
+          new MouseEvent("mouseup", { bubbles: true })
+        );
+        document.body.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      } catch (e) {
+        // ignore
+      }
+    }
+  }, [open]);
+
   const filteredCategories = categories.filter(
     (cat) => cat.type === formData.type
   );
@@ -101,22 +123,38 @@ export function TransactionDialog({
         category_id: formData.category_id || null,
       };
 
+      let saved: any = null;
       if (transaction) {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from("transactions")
           .update(transactionData)
-          .eq("id", transaction.id);
+          .eq("id", transaction.id)
+          .select("*, category:categories(*)")
+          .single();
 
         if (error) throw error;
+        saved = data;
       } else {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from("transactions")
-          .insert([transactionData]);
+          .insert([transactionData])
+          .select("*, category:categories(*)")
+          .single();
 
         if (error) throw error;
+        saved = data;
       }
 
-      router.refresh();
+      if (onSave && saved) onSave(saved as Transaction);
+
+      if (typeof window !== "undefined") {
+        try {
+          (document.activeElement as HTMLElement | null)?.blur();
+        } catch (e) {
+          // ignore
+        }
+      }
+
       onOpenChange(false);
     } catch (error: unknown) {
       setError(
