@@ -15,7 +15,7 @@ export default function HomePage() {
       <header className="border-b bg-white/50 backdrop-blur-sm dark:bg-gray-900/50">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Fresh FinTracker
+            FinTracker
           </h1>
           <div className="flex gap-3">
             <Button asChild variant="ghost">
