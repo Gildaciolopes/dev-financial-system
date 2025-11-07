@@ -9,6 +9,7 @@ import {
   type FilterState,
 } from "@/components/transactions/transaction-filters";
 import { TransactionsTable } from "@/components/transactions/transactions-table";
+import { toast } from "sonner";
 import type { Transaction, Category } from "@/types";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
@@ -98,14 +99,40 @@ export default function TransactionsPage() {
 
   const handleEdit = (transaction: Transaction) => {
     setEditingTransaction(transaction);
+    if (typeof window !== "undefined") {
+      try {
+        (document.activeElement as HTMLElement | null)?.blur();
+        document.dispatchEvent(
+          new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+        );
+        document.body.dispatchEvent(
+          new MouseEvent("mousedown", { bubbles: true })
+        );
+        document.body.dispatchEvent(
+          new MouseEvent("mouseup", { bubbles: true })
+        );
+        document.body.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      } catch (e) {
+        // ignore
+      }
+    }
     setIsDialogOpen(true);
   };
 
   const handleDialogClose = (open: boolean) => {
-    setIsDialogOpen(open);
     if (!open) {
       setEditingTransaction(null);
-      loadData();
+      if (typeof window !== "undefined") {
+        try {
+          (document.activeElement as HTMLElement | null)?.blur();
+        } catch (e) {
+          // ignore
+        }
+      }
+
+      setTimeout(() => setIsDialogOpen(false), 0);
+    } else {
+      setIsDialogOpen(true);
     }
   };
 
@@ -133,7 +160,30 @@ export default function TransactionsPage() {
             Gerencie suas receitas e despesas
           </p>
         </div>
-        <Button onClick={() => setIsDialogOpen(true)}>
+        <Button
+          onClick={() => {
+            if (typeof window !== "undefined") {
+              try {
+                (document.activeElement as HTMLElement | null)?.blur();
+                document.dispatchEvent(
+                  new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+                );
+                document.body.dispatchEvent(
+                  new MouseEvent("mousedown", { bubbles: true })
+                );
+                document.body.dispatchEvent(
+                  new MouseEvent("mouseup", { bubbles: true })
+                );
+                document.body.dispatchEvent(
+                  new MouseEvent("click", { bubbles: true })
+                );
+              } catch (e) {
+                // ignore
+              }
+            }
+            setIsDialogOpen(true);
+          }}
+        >
           <Plus className="mr-2 h-4 w-4" />
           Nova Transação
         </Button>
@@ -168,6 +218,21 @@ export default function TransactionsPage() {
         transaction={editingTransaction}
         categories={categories}
         userId={userId}
+        onSave={(saved: Transaction) => {
+          // Update local lists efficiently
+          setTransactions((prev) => {
+            const exists = prev.find((t) => t.id === saved.id);
+            if (exists) return prev.map((t) => (t.id === saved.id ? saved : t));
+            return [saved, ...prev];
+          });
+          setFilteredTransactions((prev) => {
+            const exists = prev.find((t) => t.id === saved.id);
+            if (exists) return prev.map((t) => (t.id === saved.id ? saved : t));
+            return [saved, ...prev];
+          });
+
+          toast.success("Transação salva com sucesso");
+        }}
       />
     </div>
   );
