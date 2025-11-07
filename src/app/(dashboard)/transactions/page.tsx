@@ -154,6 +154,11 @@ export default function TransactionsPage() {
         <TransactionsTable
           transactions={filteredTransactions}
           onEdit={handleEdit}
+          onDelete={(id: string) => {
+            // Remove deleted transaction from both lists so UI updates immediately
+            setTransactions((prev) => prev.filter((t) => t.id !== id));
+            setFilteredTransactions((prev) => prev.filter((t) => t.id !== id));
+          }}
         />
       </div>
 

@@ -42,11 +42,13 @@ import {
 interface TransactionsTableProps {
   transactions: Transaction[];
   onEdit: (transaction: Transaction) => void;
+  onDelete?: (id: string) => void;
 }
 
 export function TransactionsTable({
   transactions,
   onEdit,
+  onDelete,
 }: TransactionsTableProps) {
   const router = useRouter();
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -66,7 +68,11 @@ export function TransactionsTable({
 
       if (error) throw error;
 
-      router.refresh();
+      // Inform parent so it can update local state without a full refresh
+      if (onDelete && deleteId) {
+        onDelete(deleteId);
+      }
+
       setDeleteId(null);
     } catch (error) {
       console.error("Error deleting transaction:", error);
