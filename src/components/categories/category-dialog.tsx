@@ -32,6 +32,7 @@ interface CategoryDialogProps {
   onOpenChange: (open: boolean) => void;
   category?: Category | null;
   userId: string;
+  onSave?: (saved: Category) => void;
 }
 
 const COLORS = [
@@ -51,6 +52,7 @@ export function CategoryDialog({
   onOpenChange,
   category,
   userId,
+  onSave,
 }: CategoryDialogProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -121,22 +123,33 @@ export function CategoryDialog({
         icon: formData.icon,
       };
 
+      let saved: Category | null = null;
       if (category) {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from("categories")
           .update(categoryData)
-          .eq("id", category.id);
+          .eq("id", category.id)
+          .select("*")
+          .single();
 
         if (error) throw error;
+        saved = data as Category;
       } else {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from("categories")
-          .insert([categoryData]);
+          .insert([categoryData])
+          .select("*")
+          .single();
 
         if (error) throw error;
+        saved = data as Category;
       }
 
-      router.refresh();
+      if (onSave && saved) {
+        onSave(saved);
+      } else {
+        router.refresh();
+      }
 
       if (typeof window !== "undefined") {
         try {

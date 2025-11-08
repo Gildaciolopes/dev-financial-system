@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { CategoryDialog } from "@/components/categories/category-dialog";
+import { toast } from "sonner";
 import { CategoryCard } from "@/components/categories/category-card";
 import type { Category } from "@/types";
 import { createClient } from "@/lib/supabase/client";
@@ -229,6 +230,11 @@ export default function CategoriesPage() {
         onOpenChange={handleDialogClose}
         category={editingCategory}
         userId={userId}
+        onSave={(saved: Category) => {
+          toast.success("Categoria salva com sucesso");
+          // reload list
+          loadData();
+        }}
       />
 
       <AlertDialog

@@ -2,7 +2,7 @@
 
 import type React from "react";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -24,17 +24,39 @@ interface ContributeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   goal: FinancialGoal;
+  onSave?: (saved: FinancialGoal) => void;
 }
 
 export function ContributeDialog({
   open,
   onOpenChange,
   goal,
+  onSave,
 }: ContributeDialogProps) {
   const router = useRouter();
   const [amount, setAmount] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (open && typeof window !== "undefined") {
+      try {
+        (document.activeElement as HTMLElement | null)?.blur();
+        document.dispatchEvent(
+          new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+        );
+        document.body.dispatchEvent(
+          new MouseEvent("mousedown", { bubbles: true })
+        );
+        document.body.dispatchEvent(
+          new MouseEvent("mouseup", { bubbles: true })
+        );
+        document.body.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      } catch (e) {
+        // ignore
+      }
+    }
+  }, [open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,17 +76,32 @@ export function ContributeDialog({
       const newStatus =
         newCurrentAmount >= goal.target_amount ? "completed" : "active";
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("financial_goals")
         .update({
           current_amount: newCurrentAmount,
           status: newStatus,
         })
-        .eq("id", goal.id);
+        .eq("id", goal.id)
+        .select("*")
+        .single();
 
       if (error) throw error;
 
-      router.refresh();
+      if (onSave && data) {
+        onSave(data as FinancialGoal);
+      } else {
+        router.refresh();
+      }
+
+      if (typeof window !== "undefined") {
+        try {
+          (document.activeElement as HTMLElement | null)?.blur();
+        } catch (e) {
+          // ignore
+        }
+      }
+
       onOpenChange(false);
       setAmount("");
     } catch (error: unknown) {
