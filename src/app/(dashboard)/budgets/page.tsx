@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import { BudgetDialog } from "@/components/budgets/budget-dialog";
 import { BudgetCard } from "@/components/budgets/budget-card";
+import { toast } from "sonner";
 import type { Budget, Category, Transaction } from "@/types";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
@@ -64,6 +65,7 @@ export default function BudgetsPage() {
       currentMonth.getMonth() + 1,
       0
     );
+    const firstDayStr = firstDay.toISOString().split("T")[0];
 
     const [budgetsResult, categoriesResult, transactionsResult] =
       await Promise.all([
@@ -71,7 +73,7 @@ export default function BudgetsPage() {
           .from("budgets")
           .select("*, category:categories(*)")
           .eq("user_id", user.id)
-          .eq("month", monthStr),
+          .eq("month", firstDayStr),
         supabase
           .from("categories")
           .select("*")
@@ -111,6 +113,23 @@ export default function BudgetsPage() {
 
   const handleEdit = (budget: Budget) => {
     setEditingBudget(budget);
+    if (typeof window !== "undefined") {
+      try {
+        (document.activeElement as HTMLElement | null)?.blur();
+        document.dispatchEvent(
+          new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+        );
+        document.body.dispatchEvent(
+          new MouseEvent("mousedown", { bubbles: true })
+        );
+        document.body.dispatchEvent(
+          new MouseEvent("mouseup", { bubbles: true })
+        );
+        document.body.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      } catch (e) {
+        // ignore
+      }
+    }
     setIsDialogOpen(true);
   };
 
@@ -179,7 +198,30 @@ export default function BudgetsPage() {
             Controle seus gastos por categoria
           </p>
         </div>
-        <Button onClick={() => setIsDialogOpen(true)}>
+        <Button
+          onClick={() => {
+            if (typeof window !== "undefined") {
+              try {
+                (document.activeElement as HTMLElement | null)?.blur();
+                document.dispatchEvent(
+                  new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+                );
+                document.body.dispatchEvent(
+                  new MouseEvent("mousedown", { bubbles: true })
+                );
+                document.body.dispatchEvent(
+                  new MouseEvent("mouseup", { bubbles: true })
+                );
+                document.body.dispatchEvent(
+                  new MouseEvent("click", { bubbles: true })
+                );
+              } catch (e) {
+                // ignore
+              }
+            }
+            setIsDialogOpen(true);
+          }}
+        >
           <Plus className="mr-2 h-4 w-4" />
           Novo Orçamento
         </Button>
@@ -226,6 +268,10 @@ export default function BudgetsPage() {
         categories={categories}
         userId={userId}
         currentMonth={currentMonthStr}
+        onSave={(saved: Budget) => {
+          toast.success("Orçamento salvo com sucesso");
+          loadData();
+        }}
       />
 
       <AlertDialog
