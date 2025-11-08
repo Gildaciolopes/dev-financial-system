@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { GoalDialog } from "@/components/goals/goal-dialog";
+import { toast } from "sonner";
 import { ContributeDialog } from "@/components/goals/contribute-dialog";
 import { GoalCard } from "@/components/goals/goal-card";
 import type { FinancialGoal } from "@/types";
@@ -66,11 +67,45 @@ export default function GoalsPage() {
 
   const handleEdit = (goal: FinancialGoal) => {
     setEditingGoal(goal);
+    if (typeof window !== "undefined") {
+      try {
+        (document.activeElement as HTMLElement | null)?.blur();
+        document.dispatchEvent(
+          new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+        );
+        document.body.dispatchEvent(
+          new MouseEvent("mousedown", { bubbles: true })
+        );
+        document.body.dispatchEvent(
+          new MouseEvent("mouseup", { bubbles: true })
+        );
+        document.body.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      } catch (e) {
+        // ignore
+      }
+    }
     setIsDialogOpen(true);
   };
 
   const handleContribute = (goal: FinancialGoal) => {
     setContributingGoal(goal);
+    if (typeof window !== "undefined") {
+      try {
+        (document.activeElement as HTMLElement | null)?.blur();
+        document.dispatchEvent(
+          new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+        );
+        document.body.dispatchEvent(
+          new MouseEvent("mousedown", { bubbles: true })
+        );
+        document.body.dispatchEvent(
+          new MouseEvent("mouseup", { bubbles: true })
+        );
+        document.body.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      } catch (e) {
+        // ignore
+      }
+    }
     setIsContributeOpen(true);
   };
 
@@ -140,7 +175,30 @@ export default function GoalsPage() {
             Defina e acompanhe suas metas de economia
           </p>
         </div>
-        <Button onClick={() => setIsDialogOpen(true)}>
+        <Button
+          onClick={() => {
+            if (typeof window !== "undefined") {
+              try {
+                (document.activeElement as HTMLElement | null)?.blur();
+                document.dispatchEvent(
+                  new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+                );
+                document.body.dispatchEvent(
+                  new MouseEvent("mousedown", { bubbles: true })
+                );
+                document.body.dispatchEvent(
+                  new MouseEvent("mouseup", { bubbles: true })
+                );
+                document.body.dispatchEvent(
+                  new MouseEvent("click", { bubbles: true })
+                );
+              } catch (e) {
+                // ignore
+              }
+            }
+            setIsDialogOpen(true);
+          }}
+        >
           <Plus className="mr-2 h-4 w-4" />
           Nova Meta
         </Button>
@@ -206,6 +264,10 @@ export default function GoalsPage() {
         onOpenChange={handleDialogClose}
         goal={editingGoal}
         userId={userId}
+        onSave={(saved: FinancialGoal) => {
+          toast.success("Meta salva com sucesso");
+          loadData();
+        }}
       />
 
       {contributingGoal && (
@@ -213,6 +275,10 @@ export default function GoalsPage() {
           open={isContributeOpen}
           onOpenChange={handleContributeClose}
           goal={contributingGoal}
+          onSave={(saved: FinancialGoal) => {
+            toast.success("Contribuição adicionada com sucesso");
+            loadData();
+          }}
         />
       )}
 

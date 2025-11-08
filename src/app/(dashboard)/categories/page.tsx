@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { CategoryDialog } from "@/components/categories/category-dialog";
+import { toast } from "sonner";
 import { CategoryCard } from "@/components/categories/category-card";
 import type { Category } from "@/types";
 import { createClient } from "@/lib/supabase/client";
@@ -64,6 +65,23 @@ export default function CategoriesPage() {
 
   const handleEdit = (category: Category) => {
     setEditingCategory(category);
+    if (typeof window !== "undefined") {
+      try {
+        (document.activeElement as HTMLElement | null)?.blur();
+        document.dispatchEvent(
+          new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+        );
+        document.body.dispatchEvent(
+          new MouseEvent("mousedown", { bubbles: true })
+        );
+        document.body.dispatchEvent(
+          new MouseEvent("mouseup", { bubbles: true })
+        );
+        document.body.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      } catch (e) {
+        // ignore
+      }
+    }
     setIsDialogOpen(true);
   };
 
@@ -125,7 +143,30 @@ export default function CategoriesPage() {
             Organize suas transações por categorias
           </p>
         </div>
-        <Button onClick={() => setIsDialogOpen(true)}>
+        <Button
+          onClick={() => {
+            if (typeof window !== "undefined") {
+              try {
+                (document.activeElement as HTMLElement | null)?.blur();
+                document.dispatchEvent(
+                  new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+                );
+                document.body.dispatchEvent(
+                  new MouseEvent("mousedown", { bubbles: true })
+                );
+                document.body.dispatchEvent(
+                  new MouseEvent("mouseup", { bubbles: true })
+                );
+                document.body.dispatchEvent(
+                  new MouseEvent("click", { bubbles: true })
+                );
+              } catch (e) {
+                // ignore
+              }
+            }
+            setIsDialogOpen(true);
+          }}
+        >
           <Plus className="mr-2 h-4 w-4" />
           Nova Categoria
         </Button>
@@ -189,6 +230,11 @@ export default function CategoriesPage() {
         onOpenChange={handleDialogClose}
         category={editingCategory}
         userId={userId}
+        onSave={(saved: Category) => {
+          toast.success("Categoria salva com sucesso");
+          // reload list
+          loadData();
+        }}
       />
 
       <AlertDialog

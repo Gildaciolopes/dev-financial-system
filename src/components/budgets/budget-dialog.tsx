@@ -34,6 +34,7 @@ interface BudgetDialogProps {
   categories: Category[];
   userId: string;
   currentMonth: string;
+  onSave?: (saved: Budget) => void;
 }
 
 export function BudgetDialog({
@@ -43,6 +44,7 @@ export function BudgetDialog({
   categories,
   userId,
   currentMonth,
+  onSave,
 }: BudgetDialogProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -70,6 +72,28 @@ export function BudgetDialog({
     }
   }, [budget, open, currentMonth]);
 
+  // When opening, blur any active element and try to close poppers so Radix
+  // can apply aria-hidden without being blocked by a focused descendant.
+  useEffect(() => {
+    if (open && typeof window !== "undefined") {
+      try {
+        (document.activeElement as HTMLElement | null)?.blur();
+        document.dispatchEvent(
+          new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+        );
+        document.body.dispatchEvent(
+          new MouseEvent("mousedown", { bubbles: true })
+        );
+        document.body.dispatchEvent(
+          new MouseEvent("mouseup", { bubbles: true })
+        );
+        document.body.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      } catch (e) {
+        // ignore
+      }
+    }
+  }, [open]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -88,27 +112,55 @@ export function BudgetDialog({
         throw new Error("Selecione uma categoria");
       }
 
+      // The DB `month` column is of type DATE. The HTML month input returns "YYYY-MM".
+      // Postgres expects a full date (YYYY-MM-DD), so normalize to the first day of the month.
+      const normalizedMonth = /^\d{4}-\d{2}$/.test(formData.month)
+        ? `${formData.month}-01`
+        : formData.month;
+
       const budgetData = {
         user_id: userId,
         category_id: formData.category_id,
         amount,
-        month: formData.month,
+        month: normalizedMonth,
       };
 
+      let saved: Budget | null = null;
       if (budget) {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from("budgets")
           .update(budgetData)
-          .eq("id", budget.id);
+          .eq("id", budget.id)
+          .select("*, category:categories(*)")
+          .single();
 
         if (error) throw error;
+        saved = data as Budget;
       } else {
-        const { error } = await supabase.from("budgets").insert([budgetData]);
+        const { data, error } = await supabase
+          .from("budgets")
+          .insert([budgetData])
+          .select("*, category:categories(*)")
+          .single();
 
         if (error) throw error;
+        saved = data as Budget;
       }
 
-      router.refresh();
+      if (onSave && saved) {
+        onSave(saved);
+      } else {
+        router.refresh();
+      }
+
+      if (typeof window !== "undefined") {
+        try {
+          (document.activeElement as HTMLElement | null)?.blur();
+        } catch (e) {
+          // ignore
+        }
+      }
+
       onOpenChange(false);
     } catch (error: unknown) {
       setError(

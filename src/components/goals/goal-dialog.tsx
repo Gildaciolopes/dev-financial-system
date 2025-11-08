@@ -25,6 +25,7 @@ interface GoalDialogProps {
   onOpenChange: (open: boolean) => void;
   goal?: FinancialGoal | null;
   userId: string;
+  onSave?: (saved: FinancialGoal) => void;
 }
 
 export function GoalDialog({
@@ -32,6 +33,7 @@ export function GoalDialog({
   onOpenChange,
   goal,
   userId,
+  onSave,
 }: GoalDialogProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -62,6 +64,26 @@ export function GoalDialog({
     }
   }, [goal, open]);
 
+  useEffect(() => {
+    if (open && typeof window !== "undefined") {
+      try {
+        (document.activeElement as HTMLElement | null)?.blur();
+        document.dispatchEvent(
+          new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+        );
+        document.body.dispatchEvent(
+          new MouseEvent("mousedown", { bubbles: true })
+        );
+        document.body.dispatchEvent(
+          new MouseEvent("mouseup", { bubbles: true })
+        );
+        document.body.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      } catch (e) {
+        // ignore
+      }
+    }
+  }, [open]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -90,22 +112,42 @@ export function GoalDialog({
         status: currentAmount >= targetAmount ? "completed" : "active",
       };
 
+      let saved: FinancialGoal | null = null;
       if (goal) {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from("financial_goals")
           .update(goalData)
-          .eq("id", goal.id);
+          .eq("id", goal.id)
+          .select("*")
+          .single();
 
         if (error) throw error;
+        saved = data as FinancialGoal;
       } else {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from("financial_goals")
-          .insert([goalData]);
+          .insert([goalData])
+          .select("*")
+          .single();
 
         if (error) throw error;
+        saved = data as FinancialGoal;
       }
 
-      router.refresh();
+      if (onSave && saved) {
+        onSave(saved);
+      } else {
+        router.refresh();
+      }
+
+      if (typeof window !== "undefined") {
+        try {
+          (document.activeElement as HTMLElement | null)?.blur();
+        } catch (e) {
+          // ignore
+        }
+      }
+
       onOpenChange(false);
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "Erro ao salvar meta");
