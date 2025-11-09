@@ -90,7 +90,7 @@ export default function RegisterPage() {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="seu@email.com"
+                  placeholder="Insira seu email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
