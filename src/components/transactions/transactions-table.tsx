@@ -17,7 +17,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { Transaction } from "@/types";
-import { format } from "date-fns";
+import { format, parse } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   MoreHorizontal,
@@ -146,9 +146,20 @@ export function TransactionsTable({
                   )}
                 </TableCell>
                 <TableCell>
-                  {format(new Date(transaction.date), "dd MMM yyyy", {
-                    locale: ptBR,
-                  })}
+                  {(() => {
+                    const raw = transaction.date as unknown as string;
+                    let dateObj: Date;
+                    // If date is a YYYY-MM-DD string, parse it as local date to avoid timezone shift
+                    if (
+                      typeof raw === "string" &&
+                      /^\d{4}-\d{2}-\d{2}$/.test(raw)
+                    ) {
+                      dateObj = parse(raw, "yyyy-MM-dd", new Date());
+                    } else {
+                      dateObj = new Date(raw);
+                    }
+                    return format(dateObj, "dd MMM yyyy", { locale: ptBR });
+                  })()}
                 </TableCell>
                 <TableCell className="text-right">
                   <span
