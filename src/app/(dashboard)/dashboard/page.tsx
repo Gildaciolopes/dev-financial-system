@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { ExpenseChart } from "@/components/dashboard/expense-chart";
-import { MonthlyChart } from "@/components/dashboard/monthly-chart";
+import { DailyChart } from "@/components/dashboard/daily-chart";
 import { RecentTransactions } from "@/components/dashboard/recent-transactions";
 import { TrendingUp, TrendingDown, Wallet, PiggyBank } from "lucide-react";
 import type { Transaction, Category, MonthlyData } from "@/types";
@@ -120,6 +120,41 @@ export default async function DashboardPage() {
     });
   }
 
+  // Prepare daily data for the current month (so chart shows up/down by day)
+  const daysInMonth = lastDayOfMonth.getDate();
+  const dailyData: Array<{ day: string; income: number; expenses: number }> =
+    [];
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = new Date(
+      currentDate.getFullYear(),
+      currentDate.getMonth(),
+      d
+    )
+      .toISOString()
+      .split("T")[0];
+
+    const dayTransactions = (transactions as Transaction[] | undefined)?.filter(
+      (t: Transaction) => {
+        // t.date from supabase is stored as ISO date string (YYYY-MM-DD)
+        return String((t as any).date).startsWith(dateStr);
+      }
+    );
+
+    const income =
+      dayTransactions
+        ?.filter((t) => t.type === "income")
+        .reduce((sum: number, t: Transaction) => sum + Number(t.amount), 0) ||
+      0;
+
+    const expenses =
+      dayTransactions
+        ?.filter((t) => t.type === "expense")
+        .reduce((sum: number, t: Transaction) => sum + Number(t.amount), 0) ||
+      0;
+
+    dailyData.push({ day: String(d), income, expenses });
+  }
+
   return (
     <div className="space-y-8">
       <div>
@@ -166,7 +201,7 @@ export default async function DashboardPage() {
       {/* Charts Grid */}
       <div className="grid gap-6 lg:grid-cols-2">
         <ExpenseChart data={expenseChartData} />
-        <MonthlyChart data={monthlyData} />
+        <DailyChart data={dailyData} />
       </div>
 
       {/* Recent Transactions */}
