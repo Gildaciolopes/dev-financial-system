@@ -50,7 +50,15 @@ export function TransactionDialog({
     type: transaction?.type || "expense",
     amount: transaction?.amount.toString() || "",
     description: transaction?.description || "",
-    date: transaction?.date || new Date().toISOString().split("T")[0],
+    date:
+      transaction?.date ||
+      (() => {
+        const d = new Date();
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, "0");
+        const dd = String(d.getDate()).padStart(2, "0");
+        return `${yyyy}-${mm}-${dd}`;
+      })(),
     category_id: transaction?.category_id || "",
   });
 
@@ -68,7 +76,13 @@ export function TransactionDialog({
         type: "expense",
         amount: "",
         description: "",
-        date: new Date().toISOString().split("T")[0],
+        date: (() => {
+          const d = new Date();
+          const yyyy = d.getFullYear();
+          const mm = String(d.getMonth() + 1).padStart(2, "0");
+          const dd = String(d.getDate()).padStart(2, "0");
+          return `${yyyy}-${mm}-${dd}`;
+        })(),
         category_id: "",
       });
     }
@@ -119,7 +133,7 @@ export function TransactionDialog({
         type: formData.type as "income" | "expense",
         amount,
         description: formData.description || "",
-        date: `${formData.date}T00:00:00Z`,
+        date: `${formData.date}T12:00:00Z`,
         ...(formData.category_id ? { category_id: formData.category_id } : {}),
       };
 
