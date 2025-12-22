@@ -22,9 +22,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Category, Transaction } from "@/types";
-import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
+import { transactionsAPI, Transaction, Category } from "@/lib/api";
+import { useAuth } from "@/lib/hooks/useAuth";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -33,7 +32,6 @@ interface TransactionDialogProps {
   onOpenChange: (open: boolean) => void;
   transaction?: Transaction | null;
   categories: Category[];
-  userId: string;
   onSave?: (saved: Transaction) => void;
 }
 
@@ -42,10 +40,9 @@ export function TransactionDialog({
   onOpenChange,
   transaction,
   categories,
-  userId,
   onSave,
 }: TransactionDialogProps) {
-  const router = useRouter();
+  const { token } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -53,7 +50,15 @@ export function TransactionDialog({
     type: transaction?.type || "expense",
     amount: transaction?.amount.toString() || "",
     description: transaction?.description || "",
-    date: transaction?.date || new Date().toISOString().split("T")[0],
+    date:
+      transaction?.date ||
+      (() => {
+        const d = new Date();
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, "0");
+        const dd = String(d.getDate()).padStart(2, "0");
+        return `${yyyy}-${mm}-${dd}`;
+      })(),
     category_id: transaction?.category_id || "",
   });
 
@@ -63,7 +68,7 @@ export function TransactionDialog({
         type: transaction.type,
         amount: transaction.amount.toString(),
         description: transaction.description || "",
-        date: transaction.date,
+        date: transaction.date.split("T")[0], // Extract just the date part
         category_id: transaction.category_id || "",
       });
     } else {
@@ -71,7 +76,13 @@ export function TransactionDialog({
         type: "expense",
         amount: "",
         description: "",
-        date: new Date().toISOString().split("T")[0],
+        date: (() => {
+          const d = new Date();
+          const yyyy = d.getFullYear();
+          const mm = String(d.getMonth() + 1).padStart(2, "0");
+          const dd = String(d.getDate()).padStart(2, "0");
+          return `${yyyy}-${mm}-${dd}`;
+        })(),
         category_id: "",
       });
     }
@@ -103,10 +114,14 @@ export function TransactionDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!token) {
+      setError("Token de autenticação não encontrado");
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
-
-    const supabase = createClient();
 
     try {
       const amount = Number.parseFloat(formData.amount);
@@ -115,37 +130,38 @@ export function TransactionDialog({
       }
 
       const transactionData = {
-        user_id: userId,
-        type: formData.type,
+        type: formData.type as "income" | "expense",
         amount,
-        description: formData.description || null,
-        date: formData.date,
-        category_id: formData.category_id || null,
+        description: formData.description || "",
+        date: `${formData.date}T12:00:00Z`,
+        ...(formData.category_id ? { category_id: formData.category_id } : {}),
       };
 
-      let saved: any = null;
+      let result;
       if (transaction) {
-        const { data, error } = await supabase
-          .from("transactions")
-          .update(transactionData)
-          .eq("id", transaction.id)
-          .select("*, category:categories(*)")
-          .single();
-
-        if (error) throw error;
-        saved = data;
+        result = await transactionsAPI.update(
+          token,
+          transaction.id,
+          transactionData
+        );
+        // Fetch the updated transaction with category
+        const fetchResult = await transactionsAPI.getById(
+          token,
+          transaction.id
+        );
+        if (fetchResult.success && fetchResult.data && onSave) {
+          onSave(fetchResult.data);
+        }
       } else {
-        const { data, error } = await supabase
-          .from("transactions")
-          .insert([transactionData])
-          .select("*, category:categories(*)")
-          .single();
-
-        if (error) throw error;
-        saved = data;
+        result = await transactionsAPI.create(token, transactionData);
+        if (result.success && result.data && onSave) {
+          onSave(result.data);
+        }
       }
 
-      if (onSave && saved) onSave(saved as Transaction);
+      if (!result.success) {
+        throw new Error(result.error || "Erro ao salvar transação");
+      }
 
       if (typeof window !== "undefined") {
         try {
@@ -156,10 +172,8 @@ export function TransactionDialog({
       }
 
       onOpenChange(false);
-    } catch (error: unknown) {
-      setError(
-        error instanceof Error ? error.message : "Erro ao salvar transação"
-      );
+    } catch (error: any) {
+      setError(error.message || error.error || "Erro ao salvar transação");
     } finally {
       setIsLoading(false);
     }

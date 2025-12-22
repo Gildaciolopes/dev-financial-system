@@ -10,11 +10,18 @@ import {
 } from "@/components/transactions/transaction-filters";
 import { TransactionsTable } from "@/components/transactions/transactions-table";
 import { toast } from "sonner";
-import type { Transaction, Category } from "@/types";
-import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/lib/hooks/useAuth";
 import { useRouter } from "next/navigation";
+import {
+  transactionsAPI,
+  categoriesAPI,
+  Transaction,
+  Category,
+} from "@/lib/api";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function TransactionsPage() {
+  const { user, token, loading: authLoading } = useAuth();
   const router = useRouter();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] =
@@ -24,49 +31,45 @@ export default function TransactionsPage() {
     Transaction[]
   >([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [userId, setUserId] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (!authLoading && !user) {
+      router.push("/auth/login");
+    }
+  }, [authLoading, user, router]);
+
+  useEffect(() => {
+    if (token) {
+      loadData();
+    }
+  }, [token]);
 
   const loadData = async () => {
-    const supabase = createClient();
+    if (!token) return;
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      router.push("/auth/login");
-      return;
+    try {
+      setIsLoading(true);
+
+      const [transactionsResult, categoriesResult] = await Promise.all([
+        transactionsAPI.getAll(token, { limit: 100 }),
+        categoriesAPI.getAll(token),
+      ]);
+
+      if (transactionsResult.success && transactionsResult.data) {
+        setTransactions(transactionsResult.data);
+        setFilteredTransactions(transactionsResult.data);
+      }
+
+      if (categoriesResult.success && categoriesResult.data) {
+        setCategories(categoriesResult.data);
+      }
+    } catch (error) {
+      console.error("Error loading data:", error);
+      toast.error("Erro ao carregar dados");
+    } finally {
+      setIsLoading(false);
     }
-
-    setUserId(user.id);
-
-    const [transactionsResult, categoriesResult] = await Promise.all([
-      supabase
-        .from("transactions")
-        .select("*, category:categories(*)")
-        .eq("user_id", user.id)
-        .order("date", { ascending: false }),
-      supabase
-        .from("categories")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("name"),
-    ]);
-
-    if (transactionsResult.data) {
-      setTransactions(transactionsResult.data);
-      setFilteredTransactions(transactionsResult.data);
-    }
-
-    if (categoriesResult.data) {
-      setCategories(categoriesResult.data);
-    }
-
-    setIsLoading(false);
   };
 
   const handleFilterChange = (filters: FilterState) => {
@@ -136,17 +139,12 @@ export default function TransactionsPage() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Transações</h1>
-            <p className="text-gray-600 dark:text-gray-400">Carregando...</p>
-          </div>
-        </div>
-      </div>
-    );
+  if (authLoading || isLoading) {
+    return <TransactionsSkeleton />;
+  }
+
+  if (!user) {
+    return null;
   }
 
   return (
@@ -205,7 +203,6 @@ export default function TransactionsPage() {
           transactions={filteredTransactions}
           onEdit={handleEdit}
           onDelete={(id: string) => {
-            // Remove deleted transaction from both lists so UI updates immediately
             setTransactions((prev) => prev.filter((t) => t.id !== id));
             setFilteredTransactions((prev) => prev.filter((t) => t.id !== id));
           }}
@@ -217,9 +214,7 @@ export default function TransactionsPage() {
         onOpenChange={handleDialogClose}
         transaction={editingTransaction}
         categories={categories}
-        userId={userId}
         onSave={(saved: Transaction) => {
-          // Update local lists efficiently
           setTransactions((prev) => {
             const exists = prev.find((t) => t.id === saved.id);
             if (exists) return prev.map((t) => (t.id === saved.id ? saved : t));
@@ -234,6 +229,22 @@ export default function TransactionsPage() {
           toast.success("Transação salva com sucesso");
         }}
       />
+    </div>
+  );
+}
+
+function TransactionsSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <Skeleton className="h-9 w-48 mb-2" />
+          <Skeleton className="h-5 w-64" />
+        </div>
+        <Skeleton className="h-10 w-40" />
+      </div>
+      <Skeleton className="h-20" />
+      <Skeleton className="h-96" />
     </div>
   );
 }
