@@ -16,7 +16,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { Transaction } from "@/types";
+import { Transaction, transactionsAPI } from "@/lib/api";
+import { useAuth } from "@/lib/hooks/useAuth";
 import { format, parse } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -26,8 +27,6 @@ import {
   ArrowUpCircle,
   ArrowDownCircle,
 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -50,25 +49,22 @@ export function TransactionsTable({
   onEdit,
   onDelete,
 }: TransactionsTableProps) {
-  const router = useRouter();
+  const { token } = useAuth();
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDelete = async () => {
-    if (!deleteId) return;
+    if (!deleteId || !token) return;
 
     setIsDeleting(true);
-    const supabase = createClient();
 
     try {
-      const { error } = await supabase
-        .from("transactions")
-        .delete()
-        .eq("id", deleteId);
+      const result = await transactionsAPI.delete(token, deleteId);
 
-      if (error) throw error;
+      if (!result.success) {
+        throw new Error(result.error || "Erro ao deletar transação");
+      }
 
-      // Inform parent so it can update local state without a full refresh
       if (onDelete && deleteId) {
         onDelete(deleteId);
       }

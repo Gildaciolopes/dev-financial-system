@@ -1,159 +1,129 @@
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+"use client";
+
+import { useEffect, useState } from "react";
+import { useAuth } from "@/lib/hooks/useAuth";
+import { useRouter } from "next/navigation";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { ExpenseChart } from "@/components/dashboard/expense-chart";
 import { DailyChart } from "@/components/dashboard/daily-chart";
 import { RecentTransactions } from "@/components/dashboard/recent-transactions";
 import { TrendingUp, TrendingDown, Wallet, PiggyBank } from "lucide-react";
-import type { Transaction, Category, MonthlyData } from "@/types";
+import {
+  dashboardAPI,
+  DashboardStats,
+  ExpenseByCategory,
+  MonthlyData,
+  DailyData,
+  RecentTransaction,
+} from "@/lib/api";
+import { Skeleton } from "@/components/ui/skeleton";
 
-export default async function DashboardPage() {
-  const supabase = await createClient();
+export default function DashboardPage() {
+  const { user, token, loading: authLoading } = useAuth();
+  const router = useRouter();
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [expensesByCategory, setExpensesByCategory] = useState<
+    ExpenseByCategory[]
+  >([]);
+  const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([]);
+  const [dailyData, setDailyData] = useState<DailyData[]>([]);
+  const [recentTransactions, setRecentTransactions] = useState<
+    RecentTransaction[]
+  >([]);
+  const [loading, setLoading] = useState(true);
 
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push("/auth/login");
+    }
+  }, [authLoading, user, router]);
 
-  if (userError || !user) {
-    redirect("/auth/login");
-  }
+  useEffect(() => {
+    async function loadDashboardData() {
+      if (!token) return;
 
-  // Get current month transactions
-  const currentDate = new Date();
-  const firstDayOfMonth = new Date(
-    currentDate.getFullYear(),
-    currentDate.getMonth(),
-    1
-  );
-  const lastDayOfMonth = new Date(
-    currentDate.getFullYear(),
-    currentDate.getMonth() + 1,
-    0
-  );
+      try {
+        setLoading(true);
 
-  const { data: transactions } = await supabase
-    .from("transactions")
-    .select("*, category:categories(*)")
-    .eq("user_id", user.id)
-    .gte("date", firstDayOfMonth.toISOString().split("T")[0])
-    .lte("date", lastDayOfMonth.toISOString().split("T")[0])
-    .order("date", { ascending: false });
+        const now = new Date();
+        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
-  // Calculate stats
-  const totalIncome =
-    (transactions as Transaction[] | undefined)
-      ?.filter((t: Transaction) => t.type === "income")
-      .reduce((sum: number, t: Transaction) => sum + Number(t.amount), 0) || 0;
+        const startDate = firstDay.toISOString().split("T")[0];
+        const endDate = lastDay.toISOString().split("T")[0];
 
-  const totalExpenses =
-    (transactions as Transaction[] | undefined)
-      ?.filter((t: Transaction) => t.type === "expense")
-      .reduce((sum: number, t: Transaction) => sum + Number(t.amount), 0) || 0;
+        const statsRes = await dashboardAPI.getStats(token, startDate, endDate);
+        const expensesRes = await dashboardAPI.getExpensesByCategory(
+          token,
+          startDate,
+          endDate
+        );
+        const monthlyRes = await dashboardAPI.getMonthlyData(token, 6);
+        const dailyRes = await dashboardAPI.getDailyData(
+          token,
+          startDate,
+          endDate
+        );
+        const transactionsRes = await dashboardAPI.getRecentTransactions(
+          token,
+          5
+        );
 
-  const balance = totalIncome - totalExpenses;
-  const savingsRate =
-    totalIncome > 0 ? ((balance / totalIncome) * 100).toFixed(1) : "0";
+        if (statsRes.success && statsRes.data) {
+          setStats(statsRes.data);
+        }
 
-  // Get recent transactions
-  const recentTransactions = transactions?.slice(0, 5) || [];
+        if (expensesRes.success && expensesRes.data) {
+          setExpensesByCategory(expensesRes.data);
+        }
 
-  // Prepare expense chart data
-  const expensesByCategory: {
-    [key: string]: { amount: number; color: string };
-  } = {};
-  (transactions as (Transaction & { category?: Category })[] | undefined)
-    ?.filter((t) => t.type === "expense" && t.category)
-    .forEach((t) => {
-      const categoryName = t.category?.name || "Outros";
-      const categoryColor = t.category?.color || "#6b7280";
-      if (!expensesByCategory[categoryName]) {
-        expensesByCategory[categoryName] = { amount: 0, color: categoryColor };
+        if (monthlyRes.success && monthlyRes.data) {
+          setMonthlyData(monthlyRes.data);
+        }
+
+        if (dailyRes.success && dailyRes.data) {
+          setDailyData(dailyRes.data);
+        }
+
+        if (transactionsRes.success && transactionsRes.data) {
+          setRecentTransactions(transactionsRes.data);
+        }
+      } catch (error) {
+        console.error("Error loading dashboard data:", error);
+      } finally {
+        setLoading(false);
       }
-      expensesByCategory[categoryName].amount += Number(t.amount);
-    });
+    }
 
-  const expenseChartData = Object.entries(expensesByCategory).map(
-    ([name, data]) => ({
-      name,
-      value: data.amount,
-      color: data.color,
-    })
-  );
+    if (token) {
+      loadDashboardData();
+    }
+  }, [token]);
 
-  // Prepare monthly chart data (last 6 months)
-  const monthlyData = [];
-  for (let i = 5; i >= 0; i--) {
-    const date = new Date(
-      currentDate.getFullYear(),
-      currentDate.getMonth() - i,
-      1
-    );
-    const monthName = date.toLocaleDateString("pt-BR", { month: "short" });
-
-    const firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
-    const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0);
-
-    const { data: monthTransactions } = await supabase
-      .from("transactions")
-      .select("type, amount")
-      .eq("user_id", user.id)
-      .gte("date", firstDay.toISOString().split("T")[0])
-      .lte("date", lastDay.toISOString().split("T")[0]);
-
-    const income =
-      (monthTransactions as Transaction[] | undefined)
-        ?.filter((t: Transaction) => t.type === "income")
-        .reduce((sum: number, t: Transaction) => sum + Number(t.amount), 0) ||
-      0;
-
-    const expenses =
-      (monthTransactions as Transaction[] | undefined)
-        ?.filter((t: Transaction) => t.type === "expense")
-        .reduce((sum: number, t: Transaction) => sum + Number(t.amount), 0) ||
-      0;
-
-    monthlyData.push({
-      month: monthName,
-      income,
-      expenses,
-    });
+  if (authLoading || loading) {
+    return <DashboardSkeleton />;
   }
 
-  // Prepare daily data for the current month (so chart shows up/down by day)
-  const daysInMonth = lastDayOfMonth.getDate();
-  const dailyData: Array<{ day: string; income: number; expenses: number }> =
-    [];
-  for (let d = 1; d <= daysInMonth; d++) {
-    const dateStr = new Date(
-      currentDate.getFullYear(),
-      currentDate.getMonth(),
-      d
-    )
-      .toISOString()
-      .split("T")[0];
-
-    const dayTransactions = (transactions as Transaction[] | undefined)?.filter(
-      (t: Transaction) => {
-        // t.date from supabase is stored as ISO date string (YYYY-MM-DD)
-        return String((t as any).date).startsWith(dateStr);
-      }
-    );
-
-    const income =
-      dayTransactions
-        ?.filter((t) => t.type === "income")
-        .reduce((sum: number, t: Transaction) => sum + Number(t.amount), 0) ||
-      0;
-
-    const expenses =
-      dayTransactions
-        ?.filter((t) => t.type === "expense")
-        .reduce((sum: number, t: Transaction) => sum + Number(t.amount), 0) ||
-      0;
-
-    dailyData.push({ day: String(d), income, expenses });
+  if (!user) {
+    return null;
   }
+
+  const totalIncome = stats?.totalIncome || 0;
+  const totalExpenses = stats?.totalExpenses || 0;
+  const balance = stats?.balance || 0;
+  const savingsRate = stats?.savingsRate || 0;
+
+  const expenseChartData = expensesByCategory.map((item) => ({
+    name: item.category,
+    value: item.amount,
+    color: item.color,
+  }));
+
+  const dailyChartData = dailyData.map((item) => ({
+    day: new Date(item.date).getDate().toString(),
+    income: item.income,
+    expenses: item.expenses,
+  }));
 
   return (
     <div className="space-y-8">
@@ -191,7 +161,7 @@ export default async function DashboardPage() {
         />
         <StatCard
           title="Taxa de Economia"
-          value={`${savingsRate}%`}
+          value={`${savingsRate.toFixed(1)}%`}
           icon={PiggyBank}
           iconColor="text-purple-600 dark:text-purple-400"
           iconBgColor="bg-purple-100 dark:bg-purple-900/20"
@@ -199,13 +169,37 @@ export default async function DashboardPage() {
       </div>
 
       {/* Charts Grid */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2">
         <ExpenseChart data={expenseChartData} />
-        <DailyChart data={dailyData} />
+        <DailyChart data={dailyChartData} />
       </div>
 
       {/* Recent Transactions */}
       <RecentTransactions transactions={recentTransactions} />
+    </div>
+  );
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-8">
+      <div>
+        <Skeleton className="h-9 w-48 mb-2" />
+        <Skeleton className="h-5 w-64" />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {[1, 2, 3, 4].map((i) => (
+          <Skeleton key={i} className="h-32" />
+        ))}
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <Skeleton className="h-96" />
+        <Skeleton className="h-96" />
+      </div>
+
+      <Skeleton className="h-96" />
     </div>
   );
 }

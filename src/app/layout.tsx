@@ -11,6 +11,7 @@ import {
   Source_Serif_4 as Fresh_Font_Source_Serif_4,
 } from "next/font/google";
 import { Toaster } from "sonner";
+import { AuthProvider } from "@/lib/hooks/useAuth";
 
 // Initialize fonts
 const _geist = Fresh_Font_Geist({
@@ -39,9 +40,11 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body className={`font-sans antialiased`}>
-        {children}
-        <Toaster position="top-right" richColors />
-        <Analytics />
+        <AuthProvider>
+          {children}
+          <Toaster position="top-right" richColors />
+          <Analytics />
+        </AuthProvider>
       </body>
     </html>
   );
