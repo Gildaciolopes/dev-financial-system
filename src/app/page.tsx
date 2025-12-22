@@ -45,7 +45,7 @@ export default function HomePage() {
               <Button asChild size="lg" className="h-12 px-8 text-base">
                 <Link href="/auth/register">
                   Começar agora
-                  <ArrowRight className="ml-2 h-5 w-5" />
+                  <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
                 </Link>
               </Button>
               <Button

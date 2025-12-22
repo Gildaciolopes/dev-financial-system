@@ -6,8 +6,8 @@ import { Plus } from "lucide-react";
 import { CategoryDialog } from "@/components/categories/category-dialog";
 import { toast } from "sonner";
 import { CategoryCard } from "@/components/categories/category-card";
-import type { Category } from "@/types";
-import { createClient } from "@/lib/supabase/client";
+import { categoriesAPI, Category } from "@/lib/api";
+import { useAuth } from "@/lib/hooks/useAuth";
 import { useRouter } from "next/navigation";
 import {
   AlertDialog,
@@ -20,8 +20,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function CategoriesPage() {
+  const { user, token, loading: authLoading } = useAuth();
   const router = useRouter();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
@@ -29,38 +31,37 @@ export default function CategoriesPage() {
     null
   );
   const [categories, setCategories] = useState<Category[]>([]);
-  const [userId, setUserId] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (!authLoading && !user) {
+      router.push("/auth/login");
+    }
+  }, [authLoading, user, router]);
+
+  useEffect(() => {
+    if (token) {
+      loadData();
+    }
+  }, [token]);
 
   const loadData = async () => {
-    const supabase = createClient();
+    if (!token) return;
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      router.push("/auth/login");
-      return;
+    try {
+      setIsLoading(true);
+      const result = await categoriesAPI.getAll(token);
+
+      if (result.success && result.data) {
+        setCategories(result.data);
+      }
+    } catch (error) {
+      console.error("Error loading categories:", error);
+      toast.error("Erro ao carregar categorias");
+    } finally {
+      setIsLoading(false);
     }
-
-    setUserId(user.id);
-
-    const { data } = await supabase
-      .from("categories")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("name");
-
-    if (data) {
-      setCategories(data);
-    }
-
-    setIsLoading(false);
   };
 
   const handleEdit = (category: Category) => {
@@ -86,23 +87,23 @@ export default function CategoriesPage() {
   };
 
   const handleDelete = async () => {
-    if (!deletingCategory) return;
+    if (!deletingCategory || !token) return;
 
     setIsDeleting(true);
-    const supabase = createClient();
 
     try {
-      const { error } = await supabase
-        .from("categories")
-        .delete()
-        .eq("id", deletingCategory.id);
+      const result = await categoriesAPI.delete(token, deletingCategory.id);
 
-      if (error) throw error;
+      if (!result.success) {
+        throw new Error(result.error || "Erro ao deletar categoria");
+      }
 
       await loadData();
       setDeletingCategory(null);
-    } catch (error) {
+      toast.success("Categoria deletada com sucesso");
+    } catch (error: any) {
       console.error("Error deleting category:", error);
+      toast.error(error.message || "Erro ao deletar categoria");
     } finally {
       setIsDeleting(false);
     }
@@ -119,17 +120,12 @@ export default function CategoriesPage() {
   const incomeCategories = categories.filter((c) => c.type === "income");
   const expenseCategories = categories.filter((c) => c.type === "expense");
 
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Categorias</h1>
-            <p className="text-gray-600 dark:text-gray-400">Carregando...</p>
-          </div>
-        </div>
-      </div>
-    );
+  if (authLoading || isLoading) {
+    return <CategoriesSkeleton />;
+  }
+
+  if (!user) {
+    return null;
   }
 
   return (
@@ -229,7 +225,6 @@ export default function CategoriesPage() {
         open={isDialogOpen}
         onOpenChange={handleDialogClose}
         category={editingCategory}
-        userId={userId}
         onSave={(saved: Category) => {
           toast.success("Categoria salva com sucesso");
           // reload list
@@ -264,6 +259,26 @@ export default function CategoriesPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
+  );
+}
+
+function CategoriesSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <Skeleton className="h-9 w-48 mb-2" />
+          <Skeleton className="h-5 w-64" />
+        </div>
+        <Skeleton className="h-10 w-40" />
+      </div>
+      <Skeleton className="h-10" />
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {[1, 2, 3, 4, 5, 6].map((i) => (
+          <Skeleton key={i} className="h-32" />
+        ))}
+      </div>
     </div>
   );
 }

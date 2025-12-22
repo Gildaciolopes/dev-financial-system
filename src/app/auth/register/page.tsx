@@ -14,9 +14,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { AlertCircle, Eye, EyeOff } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function RegisterPage() {
@@ -28,6 +29,13 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+
+  const handleBack = () => {
+    if (typeof window !== "undefined") {
+      if (window.history.length > 1) router.back();
+      else router.push("/");
+    }
+  };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,6 +87,17 @@ export default function RegisterPage() {
         </div>
 
         <Card className="shadow-lg">
+          <div className="px-6 pt-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleBack}
+              className="-ml-1 hover:cursor-pointer"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Voltar
+            </Button>
+          </div>
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl font-bold">Criar conta</CardTitle>
             <CardDescription>

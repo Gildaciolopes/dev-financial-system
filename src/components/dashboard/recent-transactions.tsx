@@ -1,11 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Transaction } from "@/types";
+import type { RecentTransaction } from "@/lib/api/dashboard";
 import { ArrowDownCircle, ArrowUpCircle } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 interface RecentTransactionsProps {
-  transactions: Transaction[];
+  transactions: RecentTransaction[] | Transaction[];
 }
 
 export function RecentTransactions({ transactions }: RecentTransactionsProps) {

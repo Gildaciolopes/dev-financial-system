@@ -21,9 +21,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Category } from "@/types";
-import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
+import { categoriesAPI, Category } from "@/lib/api";
+import { useAuth } from "@/lib/hooks/useAuth";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -31,7 +30,6 @@ interface CategoryDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   category?: Category | null;
-  userId: string;
   onSave?: (saved: Category) => void;
 }
 
@@ -51,10 +49,9 @@ export function CategoryDialog({
   open,
   onOpenChange,
   category,
-  userId,
   onSave,
 }: CategoryDialogProps) {
-  const router = useRouter();
+  const { token } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -105,10 +102,14 @@ export function CategoryDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!token) {
+      setError("Token de autenticação não encontrado");
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
-
-    const supabase = createClient();
 
     try {
       if (!formData.name.trim()) {
@@ -116,39 +117,29 @@ export function CategoryDialog({
       }
 
       const categoryData = {
-        user_id: userId,
         name: formData.name.trim(),
-        type: formData.type,
+        type: formData.type as "income" | "expense",
         color: formData.color,
         icon: formData.icon,
       };
 
-      let saved: Category | null = null;
+      let result;
       if (category) {
-        const { data, error } = await supabase
-          .from("categories")
-          .update(categoryData)
-          .eq("id", category.id)
-          .select("*")
-          .single();
-
-        if (error) throw error;
-        saved = data as Category;
+        result = await categoriesAPI.update(token, category.id, categoryData);
+        // Fetch the updated category
+        const fetchResult = await categoriesAPI.getById(token, category.id);
+        if (fetchResult.success && fetchResult.data && onSave) {
+          onSave(fetchResult.data);
+        }
       } else {
-        const { data, error } = await supabase
-          .from("categories")
-          .insert([categoryData])
-          .select("*")
-          .single();
-
-        if (error) throw error;
-        saved = data as Category;
+        result = await categoriesAPI.create(token, categoryData);
+        if (result.success && result.data && onSave) {
+          onSave(result.data);
+        }
       }
 
-      if (onSave && saved) {
-        onSave(saved);
-      } else {
-        router.refresh();
+      if (!result.success) {
+        throw new Error(result.error || "Erro ao salvar categoria");
       }
 
       if (typeof window !== "undefined") {
@@ -160,10 +151,8 @@ export function CategoryDialog({
       }
 
       onOpenChange(false);
-    } catch (error: unknown) {
-      setError(
-        error instanceof Error ? error.message : "Erro ao salvar categoria"
-      );
+    } catch (error: any) {
+      setError(error.message || error.error || "Erro ao salvar categoria");
     } finally {
       setIsLoading(false);
     }
