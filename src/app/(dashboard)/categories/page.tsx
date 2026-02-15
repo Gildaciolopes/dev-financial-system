@@ -28,7 +28,7 @@ export default function CategoriesPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [deletingCategory, setDeletingCategory] = useState<Category | null>(
-    null
+    null,
   );
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -57,7 +57,9 @@ export default function CategoriesPage() {
         setCategories(result.data);
       }
     } catch (error) {
-      console.error("Error loading categories:", error);
+      if (process.env.NODE_ENV === "development") {
+        console.error("Error loading categories:", error);
+      }
       toast.error("Erro ao carregar categorias");
     } finally {
       setIsLoading(false);
@@ -70,13 +72,13 @@ export default function CategoriesPage() {
       try {
         (document.activeElement as HTMLElement | null)?.blur();
         document.dispatchEvent(
-          new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+          new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
         );
         document.body.dispatchEvent(
-          new MouseEvent("mousedown", { bubbles: true })
+          new MouseEvent("mousedown", { bubbles: true }),
         );
         document.body.dispatchEvent(
-          new MouseEvent("mouseup", { bubbles: true })
+          new MouseEvent("mouseup", { bubbles: true }),
         );
         document.body.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       } catch (e) {
@@ -102,7 +104,9 @@ export default function CategoriesPage() {
       setDeletingCategory(null);
       toast.success("Categoria deletada com sucesso");
     } catch (error: any) {
-      console.error("Error deleting category:", error);
+      if (process.env.NODE_ENV === "development") {
+        console.error("Error deleting category:", error);
+      }
       toast.error(error.message || "Erro ao deletar categoria");
     } finally {
       setIsDeleting(false);
@@ -145,16 +149,19 @@ export default function CategoriesPage() {
               try {
                 (document.activeElement as HTMLElement | null)?.blur();
                 document.dispatchEvent(
-                  new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+                  new KeyboardEvent("keydown", {
+                    key: "Escape",
+                    bubbles: true,
+                  }),
                 );
                 document.body.dispatchEvent(
-                  new MouseEvent("mousedown", { bubbles: true })
+                  new MouseEvent("mousedown", { bubbles: true }),
                 );
                 document.body.dispatchEvent(
-                  new MouseEvent("mouseup", { bubbles: true })
+                  new MouseEvent("mouseup", { bubbles: true }),
                 );
                 document.body.dispatchEvent(
-                  new MouseEvent("click", { bubbles: true })
+                  new MouseEvent("click", { bubbles: true }),
                 );
               } catch (e) {
                 // ignore

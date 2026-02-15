@@ -81,7 +81,9 @@ export default function DashboardPage() {
           setRecentTransactions(transactionsRes.data);
         }
       } catch (error) {
-        console.error("Error loading dashboard data:", error);
+        if (process.env.NODE_ENV === "development") {
+          console.error("Error loading dashboard data:", error);
+        }
       } finally {
         setLoading(false);
       }

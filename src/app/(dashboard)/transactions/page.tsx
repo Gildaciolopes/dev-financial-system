@@ -65,7 +65,9 @@ export default function TransactionsPage() {
         setCategories(categoriesResult.data);
       }
     } catch (error) {
-      console.error("Error loading data:", error);
+      if (process.env.NODE_ENV === "development") {
+        console.error("Error loading data:", error);
+      }
       toast.error("Erro ao carregar dados");
     } finally {
       setIsLoading(false);
@@ -77,7 +79,7 @@ export default function TransactionsPage() {
 
     if (filters.search) {
       filtered = filtered.filter((t) =>
-        t.description?.toLowerCase().includes(filters.search.toLowerCase())
+        t.description?.toLowerCase().includes(filters.search.toLowerCase()),
       );
     }
 
@@ -106,13 +108,13 @@ export default function TransactionsPage() {
       try {
         (document.activeElement as HTMLElement | null)?.blur();
         document.dispatchEvent(
-          new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+          new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
         );
         document.body.dispatchEvent(
-          new MouseEvent("mousedown", { bubbles: true })
+          new MouseEvent("mousedown", { bubbles: true }),
         );
         document.body.dispatchEvent(
-          new MouseEvent("mouseup", { bubbles: true })
+          new MouseEvent("mouseup", { bubbles: true }),
         );
         document.body.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       } catch (e) {
@@ -164,16 +166,19 @@ export default function TransactionsPage() {
               try {
                 (document.activeElement as HTMLElement | null)?.blur();
                 document.dispatchEvent(
-                  new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+                  new KeyboardEvent("keydown", {
+                    key: "Escape",
+                    bubbles: true,
+                  }),
                 );
                 document.body.dispatchEvent(
-                  new MouseEvent("mousedown", { bubbles: true })
+                  new MouseEvent("mousedown", { bubbles: true }),
                 );
                 document.body.dispatchEvent(
-                  new MouseEvent("mouseup", { bubbles: true })
+                  new MouseEvent("mouseup", { bubbles: true }),
                 );
                 document.body.dispatchEvent(
-                  new MouseEvent("click", { bubbles: true })
+                  new MouseEvent("click", { bubbles: true }),
                 );
               } catch (e) {
                 // ignore
