@@ -27,7 +27,7 @@ class APIClient {
   private async request<T>(
     endpoint: string,
     options: RequestInit = {},
-    token?: string
+    token?: string,
   ): Promise<APIResponse<T>> {
     const url = `${this.baseURL}${endpoint}`;
 
@@ -47,6 +47,8 @@ class APIClient {
       const response = await fetch(url, {
         ...options,
         headers,
+        cache: options.cache || "no-store",
+        keepalive: true,
       });
 
       const data = await response.json();
@@ -79,7 +81,7 @@ class APIClient {
   async post<T>(
     endpoint: string,
     body: any,
-    token?: string
+    token?: string,
   ): Promise<APIResponse<T>> {
     return this.request<T>(
       endpoint,
@@ -87,14 +89,14 @@ class APIClient {
         method: "POST",
         body: JSON.stringify(body),
       },
-      token
+      token,
     );
   }
 
   async put<T>(
     endpoint: string,
     body: any,
-    token?: string
+    token?: string,
   ): Promise<APIResponse<T>> {
     return this.request<T>(
       endpoint,
@@ -102,7 +104,7 @@ class APIClient {
         method: "PUT",
         body: JSON.stringify(body),
       },
-      token
+      token,
     );
   }
 

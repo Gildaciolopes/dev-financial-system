@@ -58,12 +58,12 @@ export default function BudgetsPage() {
     const firstDay = new Date(
       currentMonth.getFullYear(),
       currentMonth.getMonth(),
-      1
+      1,
     );
     const lastDay = new Date(
       currentMonth.getFullYear(),
       currentMonth.getMonth() + 1,
-      0
+      0,
     );
     const firstDayStr = firstDay.toISOString().split("T")[0];
 
@@ -117,13 +117,13 @@ export default function BudgetsPage() {
       try {
         (document.activeElement as HTMLElement | null)?.blur();
         document.dispatchEvent(
-          new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+          new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
         );
         document.body.dispatchEvent(
-          new MouseEvent("mousedown", { bubbles: true })
+          new MouseEvent("mousedown", { bubbles: true }),
         );
         document.body.dispatchEvent(
-          new MouseEvent("mouseup", { bubbles: true })
+          new MouseEvent("mouseup", { bubbles: true }),
         );
         document.body.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       } catch (e) {
@@ -150,7 +150,9 @@ export default function BudgetsPage() {
       await loadData();
       setDeletingBudget(null);
     } catch (error) {
-      console.error("Error deleting budget:", error);
+      if (process.env.NODE_ENV === "development") {
+        console.error("Error deleting budget:", error);
+      }
     } finally {
       setIsDeleting(false);
     }
@@ -204,16 +206,19 @@ export default function BudgetsPage() {
               try {
                 (document.activeElement as HTMLElement | null)?.blur();
                 document.dispatchEvent(
-                  new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+                  new KeyboardEvent("keydown", {
+                    key: "Escape",
+                    bubbles: true,
+                  }),
                 );
                 document.body.dispatchEvent(
-                  new MouseEvent("mousedown", { bubbles: true })
+                  new MouseEvent("mousedown", { bubbles: true }),
                 );
                 document.body.dispatchEvent(
-                  new MouseEvent("mouseup", { bubbles: true })
+                  new MouseEvent("mouseup", { bubbles: true }),
                 );
                 document.body.dispatchEvent(
-                  new MouseEvent("click", { bubbles: true })
+                  new MouseEvent("click", { bubbles: true }),
                 );
               } catch (e) {
                 // ignore

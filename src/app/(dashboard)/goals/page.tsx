@@ -71,13 +71,13 @@ export default function GoalsPage() {
       try {
         (document.activeElement as HTMLElement | null)?.blur();
         document.dispatchEvent(
-          new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+          new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
         );
         document.body.dispatchEvent(
-          new MouseEvent("mousedown", { bubbles: true })
+          new MouseEvent("mousedown", { bubbles: true }),
         );
         document.body.dispatchEvent(
-          new MouseEvent("mouseup", { bubbles: true })
+          new MouseEvent("mouseup", { bubbles: true }),
         );
         document.body.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       } catch (e) {
@@ -93,13 +93,13 @@ export default function GoalsPage() {
       try {
         (document.activeElement as HTMLElement | null)?.blur();
         document.dispatchEvent(
-          new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+          new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
         );
         document.body.dispatchEvent(
-          new MouseEvent("mousedown", { bubbles: true })
+          new MouseEvent("mousedown", { bubbles: true }),
         );
         document.body.dispatchEvent(
-          new MouseEvent("mouseup", { bubbles: true })
+          new MouseEvent("mouseup", { bubbles: true }),
         );
         document.body.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       } catch (e) {
@@ -126,7 +126,9 @@ export default function GoalsPage() {
       await loadData();
       setDeletingGoal(null);
     } catch (error) {
-      console.error("Error deleting goal:", error);
+      if (process.env.NODE_ENV === "development") {
+        console.error("Error deleting goal:", error);
+      }
     } finally {
       setIsDeleting(false);
     }
@@ -181,16 +183,19 @@ export default function GoalsPage() {
               try {
                 (document.activeElement as HTMLElement | null)?.blur();
                 document.dispatchEvent(
-                  new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+                  new KeyboardEvent("keydown", {
+                    key: "Escape",
+                    bubbles: true,
+                  }),
                 );
                 document.body.dispatchEvent(
-                  new MouseEvent("mousedown", { bubbles: true })
+                  new MouseEvent("mousedown", { bubbles: true }),
                 );
                 document.body.dispatchEvent(
-                  new MouseEvent("mouseup", { bubbles: true })
+                  new MouseEvent("mouseup", { bubbles: true }),
                 );
                 document.body.dispatchEvent(
-                  new MouseEvent("click", { bubbles: true })
+                  new MouseEvent("click", { bubbles: true }),
                 );
               } catch (e) {
                 // ignore

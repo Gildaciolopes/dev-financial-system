@@ -71,7 +71,9 @@ export function TransactionsTable({
 
       setDeleteId(null);
     } catch (error) {
-      console.error("Error deleting transaction:", error);
+      if (process.env.NODE_ENV === "development") {
+        console.error("Error deleting transaction:", error);
+      }
     } finally {
       setIsDeleting(false);
     }

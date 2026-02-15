@@ -30,6 +30,10 @@ const _sourceSerif_4 = Fresh_Font_Source_Serif_4({
 export const metadata: Metadata = {
   title: "Fresh FinTracker",
   description: "Acompanhe suas finanças pessoais com facilidade e eficiência.",
+  other: {
+    "Content-Security-Policy":
+      "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.vercel-scripts.com https://*.supabase.co; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://*.supabase.co http://localhost:8080;",
+  },
 };
 
 export default function RootLayout({

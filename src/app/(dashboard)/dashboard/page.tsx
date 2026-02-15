@@ -52,22 +52,14 @@ export default function DashboardPage() {
         const startDate = firstDay.toISOString().split("T")[0];
         const endDate = lastDay.toISOString().split("T")[0];
 
-        const statsRes = await dashboardAPI.getStats(token, startDate, endDate);
-        const expensesRes = await dashboardAPI.getExpensesByCategory(
-          token,
-          startDate,
-          endDate
-        );
-        const monthlyRes = await dashboardAPI.getMonthlyData(token, 6);
-        const dailyRes = await dashboardAPI.getDailyData(
-          token,
-          startDate,
-          endDate
-        );
-        const transactionsRes = await dashboardAPI.getRecentTransactions(
-          token,
-          5
-        );
+        const [statsRes, expensesRes, monthlyRes, dailyRes, transactionsRes] =
+          await Promise.all([
+            dashboardAPI.getStats(token, startDate, endDate),
+            dashboardAPI.getExpensesByCategory(token, startDate, endDate),
+            dashboardAPI.getMonthlyData(token, 6),
+            dashboardAPI.getDailyData(token, startDate, endDate),
+            dashboardAPI.getRecentTransactions(token, 5),
+          ]);
 
         if (statsRes.success && statsRes.data) {
           setStats(statsRes.data);
@@ -89,7 +81,9 @@ export default function DashboardPage() {
           setRecentTransactions(transactionsRes.data);
         }
       } catch (error) {
-        console.error("Error loading dashboard data:", error);
+        if (process.env.NODE_ENV === "development") {
+          console.error("Error loading dashboard data:", error);
+        }
       } finally {
         setLoading(false);
       }
